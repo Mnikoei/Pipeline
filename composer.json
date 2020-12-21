@@ -1,0 +1,25 @@
+{
+    "name": "mnikoei/pipeline",
+    "description": "--",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "mohsen.nikoei",
+            "email": "mohsen.nikoei@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Mnikoei\\Pipeline\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mnikoei\\Pipeline\\ServiceProvider"
+            ]
+        }
+    }
+}
