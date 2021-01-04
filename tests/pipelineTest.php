@@ -4,6 +4,11 @@ use Mnikoei\Pipeline\LoopException;
 use Mnikoei\Pipeline\Pipeline;
 use Tests\TestCase;
 
+/**
+ * Class pipelineTest
+ * @runTestsInSeparateProcesses
+ */
+
 class pipelineTest extends TestCase
 {
     protected $pipeline;
@@ -28,6 +33,7 @@ class pipelineTest extends TestCase
 
         $this->assertSame($result, '123');
     }
+
 
     /**
      * @test
@@ -60,6 +66,16 @@ class pipelineTest extends TestCase
     /**
      * @test
      */
+    public function watchesInfiniteLoopOnceJumpedToOneOfPreviousPipes()
+    {
+        $this->pipeline->previousPipe('whatever');
+
+        $this->assertTrue($this->pipeline->loopPossibility());
+    }
+
+    /**
+     * @test
+     */
     public function avoidsInfiniteLoops()
     {
         $this->expectException(LoopException::class);
@@ -76,14 +92,65 @@ class pipelineTest extends TestCase
      */
     public function canJumpToArbitraryPipe()
     {
-        $this->expectException(LoopException::class);
-
         $result = $this->pipeline
-            ->send('jumpToFour')
+            ->send('jumpFromOneToFour')
             ->through([Pipe1::class, Pipe2::class, Pipe3::class, Pipe4::class])
             ->via('show')
             ->thenReturn();
 
-        $this->assertSame($result, 'jumpToFour14');
+        $this->assertSame($result, 'jumpFromOneToFour14');
+    }
+
+    /**
+     * @test
+     */
+    public function failsIfPipeIndexWasOutOfRange()
+    {
+        $this->expectException(UnexpectedValueException::class);
+
+        $this->pipeline
+            ->send('invalidPipeIndex')
+            ->through([Pipe1::class, Pipe2::class, Pipe3::class, Pipe4::class])
+            ->via('show')
+            ->thenReturn();
+    }
+
+    /**
+     * @test
+     */
+    public function canJumpToArbitraryPipeByGivingPipeClass()
+    {
+        $result = $this->pipeline
+            ->send('jumpFromOneToFourByClass')
+            ->through([Pipe1::class, Pipe2::class, Pipe3::class, Pipe4::class])
+            ->via('show')
+            ->thenReturn();
+
+        $this->assertSame($result, 'jumpFromOneToFourByClass14');
+    }
+
+    /**
+     * @test
+     */
+    public function failsIfClassWasNotValid()
+    {
+        $this->expectException(UnexpectedValueException::class);
+
+        $this->pipeline
+            ->send('invalidPipeClass')
+            ->through([Pipe1::class, Pipe2::class, Pipe3::class, Pipe4::class])
+            ->via('show')
+            ->thenReturn();
+    }
+
+    public function testCanConfigureLoopTimes()
+    {
+        $this->expectException(\Laravel\Nova\Exceptions\MissingActionHandlerException::class);
+
+        $this->pipeline
+            ->send('invalidPipeClass')
+            ->through([Pipe1::class, Pipe2::class, Pipe3::class, Pipe4::class])
+            ->via('show')
+            ->thenReturn();
     }
 }

@@ -31,6 +31,14 @@ class Pipeline implements PipelineContract, Iterator
     protected $method = 'handle';
 
     /**
+     * Indicates the pipeline to watch
+     * Infinite loop occurrence
+     *
+     * @var bool
+     */
+    protected $loop = false;
+
+    /**
      * The pointer that indicates current pipe
      *
      * @var int
@@ -78,10 +86,20 @@ class Pipeline implements PipelineContract, Iterator
      */
     public function then(Closure $destination)
     {
-        
+        return $destination();
     }
 
     public function thenReturn()
+    {
+        return $this->start();
+    }
+
+    public function __invoke($passable)
+    {
+        return $this->nextPipe($passable);
+    }
+
+    public function start()
     {
         return $this->nextPipe($this->passable);
     }
@@ -89,55 +107,116 @@ class Pipeline implements PipelineContract, Iterator
     /**
      * @param $passable
      * @return mixed
+     * @throws LoopException
      */
     public function nextPipe($passable)
     {
         $this->next();
-        return $this->go($passable);
+
+        return $this->pass($passable);
+    }
+
+    /**
+     * Pass back the passable data to previous data
+     *
+     * @param $passable
+     * @return mixed
+     * @throws LoopException
+     */
+    public function previousPipe($passable)
+    {
+        $this->loop = true;
+
+        $this->previous();
+
+        return $this->pass($passable);
     }
 
     /**
      * @param $passable
      * @return mixed
+     * @throws LoopException
      */
-    public function previousPipe($passable)
+    public function pass($passable)
     {
-        $this->previous();
-        return $this->go($passable);
+        if ($this->valid()) {
+
+            $this->watchLoop();
+
+            return resolve($this->pipes[$this->pointer])->{$this->method}($passable, $this);
+        }
+
+        return $this->then(function () use ($passable) {
+            return $passable;
+        });
     }
 
-    public function go($passable)
+    /**
+     * @param $pipe
+     * @param $passable
+     * @return mixed
+     * @throws LoopException
+     */
+    public function jumpTo($pipe, $passable)
     {
-        $this->checkLoop();
+        if (is_string($pipe)) {
+            $pipeIndex = array_search($pipe, $this->pipes, true);
 
-        return $this->valid()
-            ? app($this->pipes[$this->pointer])->{$this->method}($passable, $this)
-            : $passable;
+        } elseif (is_int($pipe)) {
+            $pipeIndex = $pipe;
+
+        } else {
+            throw new \UnexpectedValueException('Given pipe or index is not valid!');
+        }
+
+        if (false === $pipeIndex || ($pipe < -1 || $pipe > (count($this->pipes) - 1))) {
+            throw new \UnexpectedValueException('Given pipe or index is not valid!');
+        }
+
+        $this->pointer = $pipeIndex;
+
+        return $this->pass($passable);
     }
 
+    /**
+     * Skips next pipe
+     */
     public function skipNext()
     {
         $this->next();
     }
 
-    public function checkLoop()
+    /**
+     * Watches for infinite loop occurrence
+     *
+     * @throws LoopException
+     */
+    public function watchLoop()
     {
+        if (! $this->loopPossibility()){
+            return;
+        }
+
         static $pipeCalls = [];
 
         $calls = isset($pipeCalls[$this->current()]) ?
-            ++$pipeCalls[$this->current()]
-            : $pipeCalls[$this->current()] = 0;
+            ++ $pipeCalls[$this->current()]
+            :  $pipeCalls[$this->current()] = 0;
 
         if ($calls > 3) {
 
-            $filePath = is_string($pipe = $this->current())
-                ? $pipe
-                : (new \ReflectionClass($pipe))->getFileName();
-
-            $message = 'Looks like infinite loop occurred at ' . $filePath;
+            $message = 'Looks like infinite loop occurred at ' . $this->current();
 
             throw new LoopException($message);
         }
+    }
+
+    /**
+     * @return bool
+     */
+    public function loopPossibility(): bool
+    {
+        return $this->loop;
     }
 
     /**
@@ -153,7 +232,7 @@ class Pipeline implements PipelineContract, Iterator
      */
     public function next()
     {
-        return ++$this->pointer;
+        return ++ $this->pointer;
     }
 
     /**
@@ -161,7 +240,7 @@ class Pipeline implements PipelineContract, Iterator
      */
     public function previous()
     {
-        return --$this->pointer;
+        return -- $this->pointer;
     }
 
     /**
