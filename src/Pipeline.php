@@ -205,16 +205,22 @@ class Pipeline implements PipelineContract, Iterator
         if (is_string($pipe)) {
             $pipeIndex = array_search($pipe, $this->pipes, true);
 
+            if (false === $pipeIndex) {
+                throw new \UnexpectedValueException('Given pipe or index is not valid!');
+            }
+
         } elseif (is_int($pipe)) {
             $pipeIndex = $pipe;
+
+            if ($pipe < -1 || $pipe > (count($this->pipes) - 1)) {
+                throw new \UnexpectedValueException('Given pipe or index is not valid!');
+            }
 
         } else {
             throw new \UnexpectedValueException('Given pipe or index is not valid!');
         }
 
-        if (false === $pipeIndex || ($pipe < -1 || $pipe > (count($this->pipes) - 1))) {
-            throw new \UnexpectedValueException('Given pipe or index is not valid!');
-        }
+
 
         $this->pointer = $pipeIndex;
 
