@@ -1,7 +1,7 @@
 <?php
 
 
-use Mnikoei\Pipeline\Pipeline;
+use Illuminate\Contracts\Pipeline\Pipeline;
 
 class Pipe4
 {

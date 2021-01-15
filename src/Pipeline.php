@@ -36,7 +36,15 @@ class Pipeline implements PipelineContract, Iterator
      *
      * @var bool
      */
-    protected $loop = false;
+    protected $loopPossibility = false;
+
+    /**
+     * Determines how many times
+     * loop can repeat
+     *
+     * @var bool
+     */
+    protected $loopRepetition = 3;
 
     /**
      * The pointer that indicates current pipe
@@ -89,22 +97,53 @@ class Pipeline implements PipelineContract, Iterator
         return $destination();
     }
 
+    /**
+     * @return mixed
+     */
     public function thenReturn()
     {
         return $this->start();
     }
 
+    /**
+     * @param int $repetition
+     * @return Pipeline
+     */
+    public function loopRepetition(int $repetition): Pipeline
+    {
+        $this->loopRepetition = $repetition;
+
+        return $this;
+    }
+
+    /**
+     * Passing data to next pipe can
+     * be done by invoking pipeline object
+     *
+     * @param $passable
+     * @return mixed
+     * @throws LoopException
+     */
     public function __invoke($passable)
     {
         return $this->nextPipe($passable);
     }
 
+    /**
+     * Starts pipeline by invoking
+     * by passing data to first pipe
+     *
+     * @return mixed
+     * @throws LoopException
+     */
     public function start()
     {
         return $this->nextPipe($this->passable);
     }
 
     /**
+     * Pass the passable data forward to nex pipe
+     *
      * @param $passable
      * @return mixed
      * @throws LoopException
@@ -117,7 +156,7 @@ class Pipeline implements PipelineContract, Iterator
     }
 
     /**
-     * Pass back the passable data to previous data
+     * Pass back the passable data to previous pipe
      *
      * @param $passable
      * @return mixed
@@ -125,7 +164,7 @@ class Pipeline implements PipelineContract, Iterator
      */
     public function previousPipe($passable)
     {
-        $this->loop = true;
+        $this->loopPossibility = true;
 
         $this->previous();
 
@@ -143,7 +182,11 @@ class Pipeline implements PipelineContract, Iterator
 
             $this->watchLoop();
 
-            return resolve($this->pipes[$this->pointer])->{$this->method}($passable, $this);
+            $pipe = $this->pipes[$this->pointer];
+
+            $pipe = is_string($pipe) ? resolve($pipe) : $pipe;
+
+            return $pipe->{$this->method}($passable, $this);
         }
 
         return $this->then(function () use ($passable) {
@@ -199,13 +242,17 @@ class Pipeline implements PipelineContract, Iterator
 
         static $pipeCalls = [];
 
-        $calls = isset($pipeCalls[$this->current()]) ?
-            ++ $pipeCalls[$this->current()]
-            :  $pipeCalls[$this->current()] = 0;
+        $pipe = is_string($this->current())
+            ? $this->current()
+            : get_class($this->current());
 
-        if ($calls > 3) {
+        $calls = isset($pipeCalls[$pipe]) ?
+            ++ $pipeCalls[$pipe]
+            :  $pipeCalls[$pipe] = 1;
 
-            $message = 'Looks like infinite loop occurred at ' . $this->current();
+        if ($calls >= $this->loopRepetition) {
+
+            $message = 'Looks like infinite loop occurred at ' . $pipe;
 
             throw new LoopException($message);
         }
@@ -216,7 +263,7 @@ class Pipeline implements PipelineContract, Iterator
      */
     public function loopPossibility(): bool
     {
-        return $this->loop;
+        return $this->loopPossibility;
     }
 
     /**

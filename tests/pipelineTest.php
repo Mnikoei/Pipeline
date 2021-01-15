@@ -90,6 +90,27 @@ class pipelineTest extends TestCase
     /**
      * @test
      */
+    public function canConfigureLoopTimes()
+    {
+        $pipe1 = Mockery::spy(Pipe1::class)->makePartial();
+
+        try {
+
+            $this->pipeline
+                ->send('loopBetweenTwoAndOne')
+                ->through([$pipe1, Pipe2::class])
+                ->via('show')
+                ->loopRepetition(5)
+                ->thenReturn();
+
+        } catch (Exception $e) {}
+
+        $pipe1->shouldHaveReceived('show')->times(5);
+    }
+
+    /**
+     * @test
+     */
     public function canJumpToArbitraryPipe()
     {
         $result = $this->pipeline
@@ -135,17 +156,6 @@ class pipelineTest extends TestCase
     public function failsIfClassWasNotValid()
     {
         $this->expectException(UnexpectedValueException::class);
-
-        $this->pipeline
-            ->send('invalidPipeClass')
-            ->through([Pipe1::class, Pipe2::class, Pipe3::class, Pipe4::class])
-            ->via('show')
-            ->thenReturn();
-    }
-
-    public function testCanConfigureLoopTimes()
-    {
-        $this->expectException(\Laravel\Nova\Exceptions\MissingActionHandlerException::class);
 
         $this->pipeline
             ->send('invalidPipeClass')
