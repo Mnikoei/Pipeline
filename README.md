@@ -1,2 +1,2 @@
-# Pipline
-A package for Laravel that helps you apply pipeline pattern to your codes
+# Pipeline
+COR pattern in a better way.
