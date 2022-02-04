@@ -1,5 +1,6 @@
 <?php
 
+namespace Mnikoei\Pipeline\Tests\Pipes;
 
 class Pipe3
 {

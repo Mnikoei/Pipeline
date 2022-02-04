@@ -1,7 +1,13 @@
 <?php
 
+namespace Mnikoei\Pipeline\Tests;
+
 use Mnikoei\Pipeline\LoopException;
 use Mnikoei\Pipeline\Pipeline;
+use Mnikoei\Pipeline\Tests\Pipes\Pipe1;
+use Mnikoei\Pipeline\Tests\Pipes\Pipe2;
+use Mnikoei\Pipeline\Tests\Pipes\Pipe3;
+use Mnikoei\Pipeline\Tests\Pipes\Pipe4;
 use Tests\TestCase;
 
 /**
@@ -92,7 +98,7 @@ class pipelineTest extends TestCase
      */
     public function canConfigureLoopTimes()
     {
-        $pipe1 = Mockery::spy(Pipe1::class)->makePartial();
+        $pipe1 = \Mockery::spy(Pipe1::class)->makePartial();
 
         try {
 
@@ -103,7 +109,7 @@ class pipelineTest extends TestCase
                 ->loopRepetition(5)
                 ->thenReturn();
 
-        } catch (Exception $e) {}
+        } catch (\Exception $e) {}
 
         $pipe1->shouldHaveReceived('show')->times(5);
     }
@@ -127,7 +133,7 @@ class pipelineTest extends TestCase
      */
     public function failsIfPipeIndexWasOutOfRange()
     {
-        $this->expectException(UnexpectedValueException::class);
+        $this->expectException(\UnexpectedValueException::class);
 
         $this->pipeline
             ->send('invalidPipeIndex')
@@ -155,7 +161,7 @@ class pipelineTest extends TestCase
      */
     public function failsIfClassWasNotValid()
     {
-        $this->expectException(UnexpectedValueException::class);
+        $this->expectException(\UnexpectedValueException::class);
 
         $this->pipeline
             ->send('invalidPipeClass')

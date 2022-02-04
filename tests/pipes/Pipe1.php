@@ -1,5 +1,6 @@
 <?php
 
+namespace Mnikoei\Pipeline\Tests\Pipes;
 
 use Illuminate\Support\Arr;
 use Mnikoei\Pipeline\Pipeline;

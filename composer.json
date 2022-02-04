@@ -15,11 +15,9 @@
             "Mnikoei\\Pipeline\\": "src/"
         }
     },
-    "extra": {
-        "laravel": {
-            "providers": [
-                "Mnikoei\\Pipeline\\ServiceProvider"
-            ]
+    "autoload-dev": {
+        "psr-4": {
+            "Mnikoei\\Pipeline\\Tests\\": "tests/"
         }
     }
 }

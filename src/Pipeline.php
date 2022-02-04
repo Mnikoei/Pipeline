@@ -3,6 +3,8 @@
 namespace Mnikoei\Pipeline;
 
 use Closure;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Container\Container as ContainerContract;
 use Illuminate\Contracts\Pipeline\Pipeline as PipelineContract;
 use Iterator;
 
@@ -44,7 +46,7 @@ class Pipeline implements PipelineContract, Iterator
      *
      * @var bool
      */
-    protected $loopRepetition = 3;
+    protected $loopRepetition = 2;
 
     /**
      * The pointer that indicates current pipe
@@ -52,6 +54,15 @@ class Pipeline implements PipelineContract, Iterator
      * @var int
      */
     protected $pointer = -1;
+
+    protected $pipeCalls = [];
+
+    protected $container;
+
+    public function __construct(ContainerContract $container = null)
+    {
+        $this->container = $container;
+    }
 
     public function send($passable)
     {
@@ -184,7 +195,7 @@ class Pipeline implements PipelineContract, Iterator
 
             $pipe = $this->pipes[$this->pointer];
 
-            $pipe = is_string($pipe) ? resolve($pipe) : $pipe;
+            $pipe = is_string($pipe) ? $this->resolve($pipe) : $pipe;
 
             return $pipe->{$this->method}($passable, $this);
         }
@@ -206,21 +217,19 @@ class Pipeline implements PipelineContract, Iterator
             $pipeIndex = array_search($pipe, $this->pipes, true);
 
             if (false === $pipeIndex) {
-                throw new \UnexpectedValueException('Given pipe or index is not valid!');
+                throw new \UnexpectedValueException('Given pipe or pipe index is invalid!');
             }
 
         } elseif (is_int($pipe)) {
             $pipeIndex = $pipe;
 
             if ($pipe < -1 || $pipe > (count($this->pipes) - 1)) {
-                throw new \UnexpectedValueException('Given pipe or index is not valid!');
+                throw new \UnexpectedValueException('Given pipe or pipe index is invalid!');
             }
 
         } else {
-            throw new \UnexpectedValueException('Given pipe or index is not valid!');
+            throw new \UnexpectedValueException('Given pipe or pipe index is invalid!');
         }
-
-
 
         $this->pointer = $pipeIndex;
 
@@ -242,25 +251,21 @@ class Pipeline implements PipelineContract, Iterator
      */
     public function watchLoop()
     {
-        if (! $this->loopPossibility()){
+        if (! $this->loopPossibility){
             return;
         }
-
-        static $pipeCalls = [];
 
         $pipe = is_string($this->current())
             ? $this->current()
             : get_class($this->current());
 
-        $calls = isset($pipeCalls[$pipe]) ?
-            ++ $pipeCalls[$pipe]
-            :  $pipeCalls[$pipe] = 1;
+        $calls = isset($this->pipeCalls[$pipe]) ?
+            ++ $this->pipeCalls[$pipe]
+            :  $this->pipeCalls[$pipe] = 1;
 
         if ($calls >= $this->loopRepetition) {
 
-            $message = 'Looks like infinite loop occurred at ' . $pipe;
-
-            throw new LoopException($message);
+            throw new LoopException('Looks like infinite loop occurred at ' . $pipe);
         }
     }
 
@@ -315,5 +320,14 @@ class Pipeline implements PipelineContract, Iterator
     public function rewind()
     {
         $this->pointer = 0;
+    }
+
+    public function resolve($name)
+    {
+        if (! $this->container) {
+            $this->container = Container::getInstance();
+        }
+
+        return $this->container->make($name);
     }
 }
